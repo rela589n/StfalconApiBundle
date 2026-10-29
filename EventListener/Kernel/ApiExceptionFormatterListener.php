@@ -25,6 +25,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
+use Symfony\Component\HttpKernel\EventListener\ErrorListener;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -38,6 +39,12 @@ final class ApiExceptionFormatterListener implements EventSubscriberInterface
     use Traits\SentryClientTrait;
     use Traits\SymfonySerializerTrait;
     use Traits\TranslatorTrait;
+
+    /**
+     * After {@see ErrorListener::logKernelException()} (0): setResponse() stops propagation, the exception would go unlogged.
+     * Before {@see ErrorListener::onKernelException()} (-128): it renders its own error page.
+     */
+    public const PRIORITY = -64;
 
     private const PROD_ENV = 'prod';
 
@@ -178,7 +185,7 @@ final class ApiExceptionFormatterListener implements EventSubscriberInterface
      */
     public static function getSubscribedEvents(): iterable
     {
-        yield ExceptionEvent::class => '__invoke';
+        yield ExceptionEvent::class => ['__invoke', self::PRIORITY];
     }
 
     /**
